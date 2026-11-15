@@ -150,6 +150,7 @@ export default defineConfig(({ command, isPreview }) => ({
     host: "0.0.0.0",
     port: 8080,
     strictPort: true,
+    allowedHosts: true, // <--- Aria tambahkan baris ini biar Vite nerima link dari Cloudflare Tunnel
   },
   preview: {
     host: "127.0.0.1",
