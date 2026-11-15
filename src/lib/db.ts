@@ -5,10 +5,24 @@ export type DbSource = "neon" | "pglite";
 
 // An empty/whitespace DATABASE_URL (an easy misconfig in deploy UIs) must mean
 // "unset" — otherwise production would silently run on the PGLite fallback.
+// Also reject strings that are not valid postgres:// or postgresql:// URLs so
+// `new Pool({ connectionString })` never throws the opaque "Invalid URL string."
 const rawDatabaseUrl =
   typeof process !== "undefined" ? process.env.DATABASE_URL : undefined;
-const databaseUrl =
-  rawDatabaseUrl && rawDatabaseUrl.trim() ? rawDatabaseUrl : undefined;
+
+function isValidPostgresUrl(value: string | undefined): value is string {
+  if (!value || !value.trim()) return false;
+  try {
+    const u = new URL(value.trim());
+    return u.protocol === "postgres:" || u.protocol === "postgresql:";
+  } catch {
+    return false;
+  }
+}
+
+const databaseUrl = isValidPostgresUrl(rawDatabaseUrl)
+  ? rawDatabaseUrl.trim()
+  : undefined;
 
 /**
  * Active backend: real **Neon** when `DATABASE_URL` is set (deployed / configured
