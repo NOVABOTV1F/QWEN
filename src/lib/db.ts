@@ -21,7 +21,7 @@ function isValidPostgresUrl(value: string | undefined): value is string {
 }
 
 // TEMP: Force PGLite so login/OTP works even if DATABASE_URL is broken or missing.
-// Data is in-memory (resets on restart). Change back later when you have a real Postgres.
+// Data is now persisted to disk (./pglite-data) so it survives restarts.
 const databaseUrl = undefined; // force ignore any DATABASE_URL for now
 
 /**
@@ -119,11 +119,12 @@ function createNeonSql(): Promise<Sql> {
 
 async function createPgliteSql(): Promise<Sql> {
   // Embedded Postgres, imported on demand so it never loads on the Neon path.
-  // One in-memory instance per process, shared across HMR module instances, so
-  // data survives source edits (it resets on dev-server restart).
+  // One instance per process, data persisted to ./pglite-data so it survives restarts.
   globalRef.__pgliteInstance__ ??= (async () => {
     const { PGlite } = await import("@electric-sql/pglite");
+    // Persist to disk so data survives server restarts
     const pg = new PGlite({
+      dataDir: "./pglite-data",
       parsers: {
         [OID_INT8]: Number,
         [OID_DATE]: identity,
