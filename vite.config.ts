@@ -171,7 +171,8 @@ export default defineConfig(({ command, isPreview }) => ({
     ...(command === "build" || isPreview
       ? [
           nitro({
-            preset: "vercel",
+            // No fixed preset: Nitro auto-detects Vercel, Netlify, Cloudflare, etc.
+            // from the host's env. Override with NITRO_PRESET if needed.
             // Auto-registers server/middleware/* (the PWA install page +
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
             // false, so removing this silently unwires /?install=1 on deploys.

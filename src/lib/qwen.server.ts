@@ -1,6 +1,7 @@
 import { randomBytes, randomInt, scryptSync, timingSafeEqual } from "node:crypto";
 import tls from "node:tls";
 import { getSql, type Sql } from "@/lib/db";
+import { env } from "@/lib/env.server";
 import type {
   AdminBoard,
   AdminSession,
@@ -12,10 +13,16 @@ import type {
   StudioSettings,
 } from "@/lib/qwen-types";
 
-const ADMIN_USER = "O1OTOQWEN1";
-const ADMIN_PASS = "O5OQWEN01";
-const ADMIN_GMAIL = "raran6610@gmail.com";
-const ADMIN_KEY = "OWNERQWEN1";
+// Admin login lives in environment variables (set them on your host, never in code):
+// ADMIN_USER, ADMIN_PASS, ADMIN_GMAIL, ADMIN_KEY
+function adminConfig() {
+  return {
+    user: env("ADMIN_USER") ?? "",
+    pass: env("ADMIN_PASS") ?? "",
+    gmail: (env("ADMIN_GMAIL") ?? "").toLowerCase(),
+    key: env("ADMIN_KEY") ?? "",
+  };
+}
 
 function safeEqual(a: string, b: string) {
   const left = Buffer.from(a);
@@ -373,10 +380,14 @@ export async function loginAdmin(input: {
   gmail: string;
   keyword: string;
 }): Promise<AdminSession | Fail> {
-  const usernameOk = safeEqual(input.username.trim(), ADMIN_USER);
-  const passwordOk = safeEqual(input.password.trim(), ADMIN_PASS);
-  const gmailOk = safeEqual(cleanMail(input.gmail), ADMIN_GMAIL);
-  const keyOk = safeEqual(input.keyword.trim(), ADMIN_KEY);
+  const cfg = adminConfig();
+  if (!cfg.user || !cfg.pass || !cfg.gmail || !cfg.key) {
+    return fail("Login admin belum diatur. Isi ADMIN_USER, ADMIN_PASS, ADMIN_GMAIL, ADMIN_KEY.");
+  }
+  const usernameOk = safeEqual(input.username.trim(), cfg.user);
+  const passwordOk = safeEqual(input.password.trim(), cfg.pass);
+  const gmailOk = safeEqual(cleanMail(input.gmail), cfg.gmail);
+  const keyOk = safeEqual(input.keyword.trim(), cfg.key);
   if (!usernameOk || !passwordOk || !gmailOk || !keyOk) {
     return fail("Data login Qwen tidak cocok.");
   }
@@ -694,7 +705,9 @@ export async function sendSmtpTest(session: string): Promise<Fail | { ok: true }
 }
 
 export async function consolePush(keyword: string, address: string, code: string): Promise<Fail | { ok: true }> {
-  if (!safeEqual(keyword.trim(), ADMIN_KEY)) return fail("Kata kunci salah.");
+  const adminKey = adminConfig().key;
+  if (!adminKey) return fail("Kata kunci admin belum diatur di environment.");
+  if (!safeEqual(keyword.trim(), adminKey)) return fail("Kata kunci salah.");
   const sql = await getSql();
   const session = token();
   await sql`insert into qwen_admin_sessions (token) values (${session})`;
