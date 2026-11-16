@@ -20,17 +20,15 @@ function isValidPostgresUrl(value: string | undefined): value is string {
   }
 }
 
-const databaseUrl = isValidPostgresUrl(rawDatabaseUrl)
-  ? rawDatabaseUrl.trim()
-  : undefined;
+// TEMP: Force PGLite so login/OTP works even if DATABASE_URL is broken or missing.
+// Data is in-memory (resets on restart). Change back later when you have a real Postgres.
+const databaseUrl = undefined; // force ignore any DATABASE_URL for now
 
 /**
- * Active backend: real **Neon** when `DATABASE_URL` is set (deployed / configured
- * sandbox), otherwise a local embedded **PGLite** (Postgres compiled to WASM) so
- * the app has a working database even with nothing configured — the live preview
- * included. Swap in Neon later by just setting `DATABASE_URL`; no code changes.
+ * Active backend: currently forced to PGLite for reliability on this server.
+ * To use real Neon/Postgres later, restore the isValidPostgresUrl check.
  */
-export const dbSource: DbSource = databaseUrl ? "neon" : "pglite";
+export const dbSource: DbSource = "pglite";
 
 /**
  * Minimal shared SQL surface, satisfied by both Neon and PGLite. Both the
