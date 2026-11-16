@@ -324,12 +324,26 @@ export function QwenApp() {
   useEffect(() => {
     if (!userToken || view !== "studio") return;
     let stop = false;
+    let lastKey = "";
+    // One poll in flight at a time: a slow DB reply (several seconds) must not
+    // overlap the next poll, or the older reply lands last and flips the code.
+    let inFlight = false;
     const pull = () => {
-      if (document.hidden) return;
-      void loadInbox({ data: { token: userToken } }).then((res) => {
-        if (stop || !res.ok) return;
-        applyInbox(res.items);
-      });
+      if (document.hidden || inFlight) return;
+      inFlight = true;
+      loadInbox({ data: { token: userToken } })
+        .then((res) => {
+          if (stop || !res.ok) return;
+          // Only re-render when the inbox really changed, so the code doesn't flicker every poll.
+          const key = JSON.stringify(res.items);
+          if (key === lastKey) return;
+          lastKey = key;
+          applyInbox(res.items);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          inFlight = false;
+        });
     };
     pull();
     const timer = window.setInterval(pull, 3000);
